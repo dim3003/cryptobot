@@ -10,30 +10,9 @@ headers = {
     "accept": "application/json",
 }
 
-resp = requests.get(url, headers=headers, timeout=30)
-resp.raise_for_status()
-data = resp.json()
-
-tokens = data["tokens"]  # dict: address -> metadata
-print("Arbitrum token count:", len(tokens))
-
-# Example: normalize to a list
-token_list = [
-    {
-        "address": addr,
-        "symbol": info.get("symbol"),
-        "name": info.get("name"),
-        "decimals": info.get("decimals"),
-        "logoURI": info.get("logoURI"),
-        "tags": info.get("tags", [])
-    }
-    for addr, info in tokens.items()
-]
-
-print(token_list[:10])
-
-def get_weather(temp):
-    if (temp) > 20:
-        return "hot"
-    else:
-        return "cold"
+def get_available_tokens():
+    resp = requests.get(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    tokens = data["tokens"]
+    return [addr for addr, info in tokens.items()]
