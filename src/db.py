@@ -38,3 +38,4 @@ class DBService:
             logger.exception("Failed to select contract addresses")
             raise
 
+

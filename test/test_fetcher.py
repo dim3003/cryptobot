@@ -1,6 +1,7 @@
 import re
-from src.fetcher import get_available_tokens
+from datetime import datetime
 from unittest.mock import MagicMock
+from src.fetcher import get_available_tokens, get_token_prices
 
 ETH_ADDRESS_REGEX = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
@@ -30,12 +31,11 @@ def test_get_available_tokens_format(mocker):
 
     assert len(tokens) == len(set(tokens))
 
-def test_get_token_ohlcv(mocker):
+def test_get_token_prices(mocker):
     fake_response = mocker.Mock()
     fake_response.raise_for_status.return_value = None
     fake_response.json.return_value = {
         "data": {
-            "symbol": "ETH",
             "prices": [
                 {
                     "value": "1900.00",
@@ -47,10 +47,32 @@ def test_get_token_ohlcv(mocker):
         }
     }
 
-    mocker.patch(
-        "src.fetcher.requests.get",
+    mock_get = mocker.patch(
+        "src.fetcher.requests.post",
         return_value=fake_response,
     )
 
+    start = datetime.fromisoformat("2024-01-01T00:00:00")
+    end = datetime.fromisoformat("2024-01-31T23:59:59") 
+
+    prices = list(get_token_prices(
+        "eth.mainnet",
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        start,
+        end
+    ))
+
+    assert len(prices) == 1
+
+    price = prices[0]
+    assert price == {
+        "value": "1900.00",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "marketCap": "274292310008.21802",
+        "totalVolume": "6715146404.608721",
+    }
+
+    mock_get.assert_called_once()
+    
 
 
