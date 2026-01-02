@@ -29,3 +29,28 @@ def test_get_available_tokens_format(mocker):
         assert ETH_ADDRESS_REGEX.match(token)
 
     assert len(tokens) == len(set(tokens))
+
+def test_get_token_ohlcv(mocker):
+    fake_response = mocker.Mock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "data": {
+            "symbol": "ETH",
+            "prices": [
+                {
+                    "value": "1900.00",
+                    "timestamp": "2024-01-01T00:00:00Z",
+                    "marketCap": "274292310008.21802",
+                    "totalVolume": "6715146404.608721"
+                }
+            ]
+        }
+    }
+
+    mocker.patch(
+        "src.fetcher.requests.get",
+        return_value=fake_response,
+    )
+
+
+
