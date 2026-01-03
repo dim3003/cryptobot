@@ -74,4 +74,3 @@ def get_token_prices(
 
     for price in prices:
         yield price
-

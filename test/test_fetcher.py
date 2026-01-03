@@ -73,6 +73,3 @@ def test_get_token_prices(mocker):
     }
 
     mock_get.assert_called_once()
-    
-
-

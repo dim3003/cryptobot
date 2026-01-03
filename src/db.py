@@ -7,6 +7,10 @@ from .sql import (
     CREATE_CONTRACTS_TABLE_SQL,
     INSERT_CONTRACTS_SQL,
     SELECT_CONTRACTS_SQL,
+    CREATE_PRICES_TABLE_SQL,
+    CREATE_PRICES_INDEX_TOKEN_SQL,
+    CREATE_PRICES_INDEX_TIMESTAMP_SQL,
+    INSERT_PRICES_SQL,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,5 +41,37 @@ class DBService:
         except Exception:
             logger.exception("Failed to select contract addresses")
             raise
+
+    # --- Prices ---
+    def store_prices(self, token_address: str, prices: List[dict]):
+        """
+        Store daily price data for a token.
+        
+        Args:
+            token_address: The token contract address
+            prices: List of price dictionaries with keys: value, timestamp, marketCap, totalVolume
+        """
+        rows = [
+            (
+                token_address,
+                price.get("value"),
+                price.get("timestamp"),
+                price.get("marketCap"),
+                price.get("totalVolume"),
+            )
+            for price in prices
+        ]
+        try:
+            with self.conn.cursor() as curs:
+                curs.execute(CREATE_PRICES_TABLE_SQL)
+                curs.execute(CREATE_PRICES_INDEX_TOKEN_SQL)
+                curs.execute(CREATE_PRICES_INDEX_TIMESTAMP_SQL)
+                execute_values(curs, INSERT_PRICES_SQL, rows)
+            self.conn.commit()
+            logger.info("Inserted %d prices for token %s", len(prices), token_address)
+        except Exception as e:
+            self.conn.rollback()
+            logger.exception("Failed to insert prices")
+            raise e
 
 
