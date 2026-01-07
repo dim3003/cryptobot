@@ -104,39 +104,3 @@ class DBService:
             logger.exception("Failed to get all crypto prices")
             raise
 
-    # --- Clean Prices ---
-    def store_clean_prices(self, clean_data: pd.DataFrame):
-        """
-        Store daily price data for a token.
-        
-        Args:
-            token_address: The token contract address
-            prices: List of price dictionaries with keys: value, timestamp, marketCap, totalVolume
-        """
-        rows = [
-            (
-                row["token_address"],
-                row["value"],
-                row["timestamp"],
-                row["market_cap"],
-                row["total_volume"],
-                row["volatility"],
-            )
-            for _, row in clean_data.iterrows()
-        ]
-    
-        try:
-            with self.conn.cursor() as curs:
-                curs.execute(CREATE_CLEAN_PRICES_TABLE_SQL)
-                curs.execute(CREATE_CLEAN_PRICES_INDEX_TOKEN_SQL)
-                curs.execute(CREATE_CLEAN_PRICES_INDEX_TIMESTAMP_SQL)
-                execute_values(curs, INSERT_CLEAN_PRICES_SQL, rows)
-            self.conn.commit()
-            logger.info("Inserted %d clean prices", len(clean_data))
-        except Exception as e:
-            self.conn.rollback()
-            logger.exception("Failed to insert clean prices")
-            raise e
-
-
-
