@@ -98,6 +98,7 @@ The full pipeline is orchestrated by `run_backtest()`:
 
 ## 📁 Project Structure
 
+```
 src/
 ├── backtesting/
 │ ├── data_cleaner.py # Data filtering & preprocessing
@@ -105,6 +106,7 @@ src/
 │ ├── performance.py # Performance metrics
 │ ├── plot.py # Result visualization
 │ └── main.py # Backtesting orchestration
+```
 
 ---
 
@@ -112,17 +114,18 @@ src/
 
 ### 1. Install dependencies
 
-```
 bash
+```
 pip install -r requirements.txt
 ```
 
 ### 2. Run the backtest
 
-python src/backtesting/main.py
+`python src/backtesting/main.py`
 
 Or programmatically:
 
+```
 from src.backtesting.main import run_backtest
 
 results = run_backtest(
@@ -130,7 +133,7 @@ results = run_backtest(
     rebalance_days=7,
     output_filename="backtest_results.png"
 )
-
+```
 
 ## 📊 Output
 
