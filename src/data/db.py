@@ -132,3 +132,24 @@ class DBService:
             logger.exception("Failed to get all crypto prices")
             raise
 
+    def get_latest_price_date(self, schema: str = "backtest"):
+        try:
+            with self.conn.cursor() as curs:
+                curs.execute(
+                    sql.SQL("""
+                        SELECT MAX(timestamp)
+                        FROM {}.prices;
+                    """).format(sql.Identifier(schema))
+                )
+                row = curs.fetchone()
+
+                if row is None or row[0] is None:
+                    return None  # table is empty
+
+                return row[0]  # already a datetime from psycopg2
+        except Exception:
+            logger.exception("Failed to get latest crypto price timestamp")
+            raise
+
+
+

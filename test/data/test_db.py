@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 from psycopg2.extras import execute_values
 from src.data.db import DBService
@@ -195,3 +196,80 @@ def test_dbservice_get_prices(mocker, schema):
 
     pd.testing.assert_frame_equal(result, expected_df)
 
+@pytest.mark.parametrize("schema", ["backtest", "live"])
+def test_dbservice_get_latest_price_date_returns_datetime(mocker, schema):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+
+    # psycopg2 typically returns a Python datetime for timestamptz
+    expected_dt = datetime(2026, 1, 4, 11, 35, 23, tzinfo=timezone.utc)
+    mock_cursor.fetchone.return_value = (expected_dt,)
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+    result = db_service.get_latest_price_date(schema=schema)
+
+    assert result == expected_dt
+
+    executed_sql = str(mock_cursor.execute.call_args[0][0])
+    assert "SELECT MAX(timestamp)" in executed_sql
+    assert schema in executed_sql
+    assert ".prices" in executed_sql
+
+@pytest.mark.parametrize("schema", ["backtest", "live"])
+def test_dbservice_get_latest_price_date_returns_none_when_max_is_null(mocker, schema):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+
+    # Empty table -> MAX(timestamp) is NULL -> (None,)
+    mock_cursor.fetchone.return_value = (None,)
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+    result = db_service.get_latest_price_date(schema=schema)
+
+    assert result is None
+
+    executed_sql = str(mock_cursor.execute.call_args[0][0])
+    assert "SELECT MAX(timestamp)" in executed_sql
+    assert schema in executed_sql
+    assert ".prices" in executed_sql
+
+
+@pytest.mark.parametrize("schema", ["backtest", "live"])
+def test_dbservice_get_latest_price_date_returns_none_when_fetchone_is_none(mocker, schema):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+
+    # Defensive branch: cursor.fetchone() unexpectedly returns None
+    mock_cursor.fetchone.return_value = None
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+    result = db_service.get_latest_price_date(schema=schema)
+
+    assert result is None
+
+
+@pytest.mark.parametrize("schema", ["backtest", "live"])
+def test_dbservice_get_latest_price_date_raises_and_logs_on_db_error(mocker, schema):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+
+    mock_cursor.execute.side_effect = Exception("db exploded")
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    # Patch the module-level logger used inside DBService
+    mock_logger = mocker.patch("src.data.db.logger")
+
+    db_service = DBService(mock_conn)
+
+    with pytest.raises(Exception, match="db exploded"):
+        db_service.get_latest_price_date(schema=schema)
+
+    mock_logger.exception.assert_called_once()
