@@ -74,10 +74,6 @@ def test_dbservice_get_tokens(mocker):
         "0x32eb7902d4134bf98a28b963d26de779af92a212",
         "0x539bde0d7dbd336b79148aa742883198bbf60342",
     ]
-import pytest
-import pandas as pd
-from unittest.mock import MagicMock
-from src.data.db import DBService
 
 @pytest.mark.parametrize("schema", ["backtest", "live"])
 def test_dbservice_store_prices(mocker, schema):
