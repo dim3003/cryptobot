@@ -269,3 +269,81 @@ def test_dbservice_get_latest_price_date_raises_and_logs_on_db_error(mocker, sch
         db_service.get_latest_price_date(schema=schema)
 
     mock_logger.exception.assert_called_once()
+
+def test_dbservice_get_prices_distinct_tokens_default_schema(mocker):
+    # --- Mock Postgres connection and cursor ---
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+    mock_cursor.fetchall.return_value = [
+        ("0x32eb7902d4134bf98a28b963d26de779af92a212",),
+        ("0x539bde0d7dbd336b79148aa742883198bbf60342",),
+    ]
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+
+    # Call method (default schema is "backtest")
+    result = db_service.get_prices_distinct_tokens()
+
+    # --- Assertions ---
+    # 1) execute() was called once
+    assert mock_cursor.execute.call_count == 1
+
+    # 2) Validate the SQL contains the expected structure + default schema
+    executed_query = mock_cursor.execute.call_args_list[0][0][0]
+    # psycopg2.sql.SQL/Composed isn't a plain string; str() is usually fine for assertions
+    executed_query_str = str(executed_query)
+
+    assert "SELECT DISTINCT token_address" in executed_query_str
+    assert "FROM" in executed_query_str
+    assert "backtest" in executed_query_str
+    assert ".prices" in executed_query_str
+
+    # 3) Returned values are flattened list of strings
+    assert result == [
+        "0x32eb7902d4134bf98a28b963d26de779af92a212",
+        "0x539bde0d7dbd336b79148aa742883198bbf60342",
+    ]
+
+def test_dbservice_get_prices_distinct_tokens_custom_schema(mocker):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+    mock_cursor.fetchall.return_value = [
+        ("0xaaa",),
+        ("0xbbb",),
+    ]
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+
+    result = db_service.get_prices_distinct_tokens(schema="prod")
+
+    executed_query = mock_cursor.execute.call_args_list[0][0][0]
+    executed_query_str = str(executed_query)
+
+    assert "SELECT DISTINCT token_address" in executed_query_str
+    assert "prod" in executed_query_str
+    assert ".prices" in executed_query_str
+
+    assert result == ["0xaaa", "0xbbb"]
+
+
+def test_dbservice_get_prices_distinct_tokens_raises_and_logs(mocker):
+    logger_mock = mocker.patch("src.data.db.logger")
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.connection.encoding = "UTF8"
+    mock_cursor.execute.side_effect = Exception("db is down")
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    db_service = DBService(mock_conn)
+
+    with pytest.raises(Exception, match="db is down"):
+        db_service.get_prices_distinct_tokens()
+
+    logger_mock.exception.assert_called_once_with(
+        "Failed to get all distinct token addresses in price table"
+    )

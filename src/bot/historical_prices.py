@@ -30,4 +30,3 @@ def get_prices():
     # 3) fetch historical prices
     tokens = data.get_available_tokens()
     data.fetch_historical_prices(tokens, start_date=start_date)
-

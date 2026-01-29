@@ -151,5 +151,17 @@ class DBService:
             logger.exception("Failed to get latest crypto price timestamp")
             raise
 
-
+    def get_prices_distinct_tokens(self, schema: str="backtest"):
+        try:
+            with self.conn.cursor() as curs:
+                curs.execute(
+                    sql.SQL("""
+                        SELECT DISTINCT token_address FROM {}.prices;
+                    """).format(sql.Identifier(schema))
+                )
+                rows = curs.fetchall()
+                return [row[0] for row in rows]
+        except Exception:
+            logger.exception("Failed to get all distinct token addresses in price table")
+            raise
 
